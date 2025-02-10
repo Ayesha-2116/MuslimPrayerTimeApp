@@ -3,7 +3,7 @@ body {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
-  background-color: #7ba7c4;
+  background-color: #020d14;
   color: #333;
 }
 
@@ -52,14 +52,14 @@ button:hover {
   display: flex;
   justify-content: space-between;
   width: 100%;
-  max-width: 800px;
+  max-width: 6000px;
 }
 
 .rightside, .leftside {
   flex: 1;
   margin: 10px;
   padding: 20px;
-  background: #fff;
+  background: #ecedf0;
   border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
@@ -73,13 +73,15 @@ button:hover {
 .prayer {
   display: flex;
   justify-content: space-between;
-  padding: 10px;
+  padding: 15px;
   border: 1px solid #ddd;
-  border-radius: 5px;
+  border-radius: 15px;
+  font: bolder;
+  font-size: 2rem;
 }
 
 .prayer.highlighted {
-  background: #73a0c2;
+  background: #f9e507;
   font-weight: bold;
   color: #000;
   transition: all 0.3s ease-in-out;
@@ -91,6 +93,14 @@ button:hover {
 }
 
 .current-time {
+  font-size: 5rem;
+  font-weight: bold;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #3209c7;
+}
+
+.dateday,.sunrisetimetoday {
   font-size: 3rem;
   font-weight: bold;
   margin-bottom: 20px;
