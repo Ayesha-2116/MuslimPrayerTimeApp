@@ -3,35 +3,21 @@ import $ from "jquery";
 import "./index.css";
 
 function App() {
-  const [location, setLocation] = useState(""); // User-input location
+  const [location, setLocation] = useState("");
   const [prayerTimes, setPrayerTimes] = useState([]);
-  const [dayDetails, setDayDetails] = useState({
-    day: "",
-    date: "",
-  });
+  const [dayDetails, setDayDetails] = useState({ day: "", date: "" });
   const [sunriseTime, setSunriseTime] = useState("");
   const [error, setError] = useState("");
-  const [highlightedPrayer, setHighlightedPrayer] = useState(""); // Highlight the next prayer
-  const [locationSubmitted, setLocationSubmitted] = useState(false); // Track location submission
-  const [currentTime, setCurrentTime] = useState(""); // For the live clock
+  const [highlightedPrayer, setHighlightedPrayer] = useState("");
+  const [locationSubmitted, setLocationSubmitted] = useState(false);
+  const [currentTime, setCurrentTime] = useState("");
+  const [timezoneOffset, setTimezoneOffset] = useState(0);
 
-  // Get system's current date
   useEffect(() => {
     const currentDate = new Date();
     const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
     ];
     setDayDetails({
       day: dayNames[currentDate.getDay()],
@@ -41,28 +27,28 @@ function App() {
     });
   }, []);
 
-  // Update the current time in 12-hour format every second
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      let hours = now.getHours();
-      const minutes = now.getMinutes();
-      const seconds = now.getSeconds();
+      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000; // Convert to UTC
+      const localTime = new Date(utcTime + timezoneOffset * 3600000); // Adjust for timezone offset
+
+      const hours = localTime.getHours();
+      const minutes = localTime.getMinutes();
+      const seconds = localTime.getSeconds();
       const ampm = hours >= 12 ? "PM" : "AM";
-      hours = hours % 12 || 12; // Convert to 12-hour format
-      const formattedTime = `${hours.toString().padStart(2, "0")}:${minutes
-        .toString()
-        .padStart(2, "0")}:${seconds.toString().padStart(2, "0")} ${ampm}`;
+      const formattedTime = `${hours % 12 || 12}:${String(minutes).padStart(2, "0")}:${String(
+        seconds
+      ).padStart(2, "0")} ${ampm}`;
       setCurrentTime(formattedTime);
     };
 
     const interval = setInterval(updateTime, 1000);
-    return () => clearInterval(interval); // Cleanup
-  }, []);
+    return () => clearInterval(interval);
+  }, [timezoneOffset]);
 
-  // Fetch prayer times when location changes
   const fetchPrayerTimes = (location) => {
-    const API_KEY = "80e8bde95285b9ffab0dd193d93a75bc"; // Replace with your API key
+    const API_KEY = "80e8bde95285b9ffab0dd193d93a75bc";
     const url = `https://muslimsalat.com/${location}/daily.json?key=${API_KEY}&jsoncallback=?`;
 
     $.getJSON(url, (response) => {
@@ -76,6 +62,7 @@ function App() {
           { name: "Isha", time: times.isha },
         ]);
         setSunriseTime(times.shurooq);
+        setTimezoneOffset(parseFloat(response.timezone)); // Set timezone offset from API response
         setError("");
       } else {
         setError("Invalid location. Please try again.");
@@ -91,76 +78,67 @@ function App() {
     e.preventDefault();
     if (location.trim() !== "") {
       fetchPrayerTimes(location.trim());
-      setLocationSubmitted(true); // Mark location as submitted
+      setLocationSubmitted(true);
     }
   };
 
-  // Highlight upcoming prayer time
   useEffect(() => {
-    const interval = setInterval(() => {
+    const highlightPrayer = () => {
       if (prayerTimes.length > 0) {
         const now = new Date();
+        const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+        const localTime = new Date(utcTime + timezoneOffset * 3600000);
 
         for (let i = 0; i < prayerTimes.length; i++) {
-          const prayerTime = prayerTimes[i];
+          const [time, period] = prayerTimes[i].time.split(" ");
+          let [hour, minute] = time.split(":").map(Number);
+          if (period.toUpperCase() === "PM" && hour < 12) hour += 12;
+          if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
 
-          // Parse the time properly to handle AM/PM
-          const timeParts = prayerTime.time.match(/(\d+):(\d+)\s?(AM|PM)/i);
-          if (!timeParts) continue; // Skip invalid times
-
-          let hour = parseInt(timeParts[1], 10);
-          const minute = parseInt(timeParts[2], 10);
-          const period = timeParts[3].toUpperCase();
-
-          // Convert to 24-hour format
-          if (period === "PM" && hour < 12) hour += 12;
-          if (period === "AM" && hour === 12) hour = 0;
-
-          const prayerDateTime = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate(),
+          const prayerDate = new Date(
+            localTime.getFullYear(),
+            localTime.getMonth(),
+            localTime.getDate(),
             hour,
             minute
           );
 
-          if (now < prayerDateTime) {
-            setHighlightedPrayer(prayerTime.name);
-            break;
-          } else if (i === prayerTimes.length - 1) {
-            setHighlightedPrayer(prayerTimes[0].name);
+          if (localTime < prayerDate) {
+            setHighlightedPrayer(prayerTimes[i].name);
+            return;
           }
         }
-      }
-    }, 60000); // Check every minute
 
+        // Highlight the first prayer if the current time is after the last prayer
+        setHighlightedPrayer(prayerTimes[0].name);
+      }
+    };
+
+    highlightPrayer();
+    const interval = setInterval(highlightPrayer, 60000);
     return () => clearInterval(interval);
-  }, [prayerTimes]);
+  }, [prayerTimes, timezoneOffset]);
 
   return (
     <div className="app">
-      {/* Form for location input */}
-      {!locationSubmitted && (
+      {!locationSubmitted ? (
         <form className="location-form" onSubmit={handleLocationSubmit}>
           <input
             type="text"
-            placeholder="Enter your location (e.g., Windsor)"
+            placeholder="Enter your location (e.g., Mumbai)"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
           />
           <button type="submit">Get Prayer Times</button>
         </form>
-      )}
-
-      {locationSubmitted && (
+      ) : (
         <div className="small-icon" onClick={() => setLocationSubmitted(false)}>
           📍 {location}
         </div>
       )}
 
       {locationSubmitted && (
-          <div className="container">
-          {/* Left Side */}
+        <div className="container">
           <div className="leftside">
             <div className="prayertimetoday">
               {prayerTimes.length > 0 ? (
@@ -180,21 +158,18 @@ function App() {
               )}
             </div>
           </div>
-        
-          {/* Right Side */}
           <div className="rightside">
-            <div className="current-time">{currentTime}</div> {/* Display current time */}
             <div className="dateday">
               <p><strong>{dayDetails.day}</strong></p>
               <p><strong>{dayDetails.date}</strong></p>
             </div>
+            <div className="current-time">{currentTime}</div>
             <div className="sunrisetimetoday">
               <p>{sunriseTime || "N/A"}</p>
               <p>Sunrise Timing</p>
             </div>
           </div>
         </div>
-      
       )}
 
       {error && <div className="error">{error}</div>}
