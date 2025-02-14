@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import $ from "jquery";
 import "./index.css";
 
 function App() {
@@ -13,26 +12,14 @@ function App() {
   const [currentTime, setCurrentTime] = useState("");
   const [timezoneOffset, setTimezoneOffset] = useState(0);
 
-  useEffect(() => {
-    const currentDate = new Date();
-    const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const monthNames = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ];
-    setDayDetails({
-      day: dayNames[currentDate.getDay()],
-      date: `${currentDate.getDate()} ${
-        monthNames[currentDate.getMonth()]
-      } ${currentDate.getFullYear()}`,
-    });
-  }, []);
-
+  // Update current time and date dynamically
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000; // Convert to UTC
-      const localTime = new Date(utcTime + timezoneOffset * 3600000); // Adjust for timezone offset
+      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+      const localTime = new Date(utcTime + timezoneOffset * 3600000);
 
+      // Format current time
       const hours = localTime.getHours();
       const minutes = localTime.getMinutes();
       const seconds = localTime.getSeconds();
@@ -41,37 +28,52 @@ function App() {
         seconds
       ).padStart(2, "0")} ${ampm}`;
       setCurrentTime(formattedTime);
+
+      // Format date and day
+      const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+      const monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+      setDayDetails({
+        day: dayNames[localTime.getDay()],
+        date: `${localTime.getDate()} ${monthNames[localTime.getMonth()]} ${localTime.getFullYear()}`
+      });
     };
 
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, [timezoneOffset]);
 
+  // Fetch prayer times from API
   const fetchPrayerTimes = (location) => {
-    const API_KEY = "80e8bde95285b9ffab0dd193d93a75bc";
-    const url = `https://muslimsalat.com/${location}/daily.json?key=${API_KEY}&jsoncallback=?`;
+    const backendUrl = process.env.REACT_APP_BACKEND_URL;
+    const url = `${backendUrl}/api/prayer-times?location=${location}`;
 
-    $.getJSON(url, (response) => {
-      if (response.status_valid === 1) {
-        const times = response.items[0];
-        setPrayerTimes([
-          { name: "Fajr", time: times.fajr },
-          { name: "Dhuhr", time: times.dhuhr },
-          { name: "Asr", time: times.asr },
-          { name: "Maghrib", time: times.maghrib },
-          { name: "Isha", time: times.isha },
-        ]);
-        setSunriseTime(times.shurooq);
-        setTimezoneOffset(parseFloat(response.timezone)); // Set timezone offset from API response
-        setError("");
-      } else {
-        setError("Invalid location. Please try again.");
-        setPrayerTimes([]);
-        setSunriseTime("");
-      }
-    }).fail(() => {
-      setError("Failed to fetch prayer times. Please check your connection.");
-    });
+    fetch(url)
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.status_valid === 1) {
+          const times = data.items[0];
+          setPrayerTimes([
+            { name: "Fajr", time: times.fajr },
+            { name: "Dhuhr", time: times.dhuhr },
+            { name: "Asr", time: times.asr },
+            { name: "Maghrib", time: times.maghrib },
+            { name: "Isha", time: times.isha },
+          ]);
+          setSunriseTime(times.shurooq);
+          setTimezoneOffset(parseFloat(data.timezone)); // Set timezone offset from API
+
+          setError("");
+        } else {
+          setError("Invalid location. Please try again.");
+          setPrayerTimes([]);
+          setSunriseTime("");
+        }
+      })
+      .catch(() => {
+        setError("Failed to fetch prayer times. Please check your connection.");
+      });
   };
 
   const handleLocationSubmit = (e) => {
@@ -82,6 +84,7 @@ function App() {
     }
   };
 
+  // Highlight the next prayer
   useEffect(() => {
     const highlightPrayer = () => {
       if (prayerTimes.length > 0) {
@@ -108,8 +111,6 @@ function App() {
             return;
           }
         }
-
-        // Highlight the first prayer if the current time is after the last prayer
         setHighlightedPrayer(prayerTimes[0].name);
       }
     };
@@ -160,8 +161,12 @@ function App() {
           </div>
           <div className="rightside">
             <div className="dateday">
-              <p><strong>{dayDetails.day}</strong></p>
-              <p><strong>{dayDetails.date}</strong></p>
+              <p>
+                <strong>{dayDetails.day}</strong>
+              </p>
+              <p>
+                <strong>{dayDetails.date}</strong>
+              </p>
             </div>
             <div className="current-time">{currentTime}</div>
             <div className="sunrisetimetoday">
