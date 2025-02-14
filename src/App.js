@@ -127,7 +127,7 @@ function App() {
         <form className="location-form" onSubmit={handleLocationSubmit}>
           <input
             type="text"
-            placeholder="Enter your location (e.g., Mumbai)"
+            placeholder="Enter your location"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
           />
