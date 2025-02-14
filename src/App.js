@@ -20,26 +20,28 @@ function App() {
       const localTime = new Date(utcTime + timezoneOffset * 3600000);
 
       // Format current time
-      const hours = localTime.getHours();
-      const minutes = localTime.getMinutes();
-      const seconds = localTime.getSeconds();
+      let hours = localTime.getHours();
+      let minutes = localTime.getMinutes();
+      let seconds = localTime.getSeconds();
       const ampm = hours >= 12 ? "PM" : "AM";
-      const formattedTime = `${hours % 12 || 12}:${String(minutes).padStart(2, "0")}:${String(
+      hours = hours % 12 || 12;
+
+      const formattedTime = `${hours}:${String(minutes).padStart(2, "0")}:${String(
         seconds
       ).padStart(2, "0")} ${ampm}`;
       setCurrentTime(formattedTime);
 
       // Format date and day
       const dayNames = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const monthNames = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-      ];
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
       setDayDetails({
         day: dayNames[localTime.getDay()],
-        date: `${localTime.getDate()} ${monthNames[localTime.getMonth()]} ${localTime.getFullYear()}`
+        date: `${localTime.getDate()} ${monthNames[localTime.getMonth()]} ${localTime.getFullYear()}`,
       });
     };
 
+    updateTime();
     const interval = setInterval(updateTime, 1000);
     return () => clearInterval(interval);
   }, [timezoneOffset]);
@@ -63,7 +65,6 @@ function App() {
           ]);
           setSunriseTime(times.shurooq);
           setTimezoneOffset(parseFloat(data.timezone)); // Set timezone offset from API
-
           setError("");
         } else {
           setError("Invalid location. Please try again.");
@@ -144,12 +145,7 @@ function App() {
             <div className="prayertimetoday">
               {prayerTimes.length > 0 ? (
                 prayerTimes.map((prayer, index) => (
-                  <div
-                    key={index}
-                    className={`prayer ${
-                      highlightedPrayer === prayer.name ? "highlighted" : ""
-                    }`}
-                  >
+                  <div key={index} className={`prayer ${highlightedPrayer === prayer.name ? "highlighted" : ""}`}>
                     <p>{prayer.time}</p>
                     <p>{prayer.name}</p>
                   </div>
